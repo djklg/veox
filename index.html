@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gun Chat Terminal</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Gun.js -->
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <style>
+        /* Custom styles for the terminal aesthetic */
+        body {
+            background-color: #000000; /* True black background */
+            color: #00FF00; /* Neon green text */
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            cursor: text;
+            height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
+        }
+
+        /* Styling for the main terminal window */
+        #terminal-output {
+            height: calc(100vh - 4rem); /* Leave space for the input area */
+            overflow-y: scroll;
+            padding: 1rem;
+            line-height: 1.5;
+            white-space: pre-wrap; /* Preserve formatting but wrap lines */
+        }
+
+        /* Hide the scrollbar but allow scrolling */
+        #terminal-output::-webkit-scrollbar {
+            display: none;
+        }
+        #terminal-output {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Styling for the input field to match the terminal */
+        #chat-input {
+            background-color: transparent;
+            border: none;
+            outline: none;
+            color: inherit;
+            flex-grow: 1;
+            padding: 0 0.5rem;
+            caret-color: #00FF00; /* Green cursor */
+            font-size: 1rem;
+        }
+
+        /* Ensure the input wrapper looks like one continuous line */
+        #input-container {
+            border-top: 1px solid #004400; /* Subtle dividing line */
+        }
+        
+        /* Custom selection color */
+        ::selection {
+            background: #008800;
+            color: #FFFFFF;
+        }
+    </style>
+</head>
+<body class="antialiased text-sm md:text-base">
+
+    <div id="terminal-output">
+        <!-- System Welcome Message -->
+        <p class="text-cyan-400">[[ SYSTEM BOOT COMPLETE ]]</p>
+        <p class="text-cyan-400">[[ INITIALIZING PEER CONNECTION... ]]</p>
+        <p class="text-yellow-400">Enter a username to begin chat.</p>
+        <p class="text-yellow-400">Syntax: <span class="text-white">/user [your-handle]</span></p>
+        <p class="text-yellow-400">Example: <span class="text-white">/user MaxTheCoder</span></p>
+        <br>
+        <!-- Chat messages will be appended here -->
+    </div>
+
+    <div id="input-container" class="flex p-3 bg-gray-900">
+        <span id="prompt" class="text-green-400 select-none">guest@terminal:~$</span>
+        <input type="text" id="chat-input" placeholder="Type /user [handle] to set your name or type a message..." autofocus>
+    </div>
+
+    <script>
+        // --- Globals ---
+        let currentUserId = 'guest';
+        let gun;
+        const terminalOutput = document.getElementById('terminal-output');
+        const chatInput = document.getElementById('chat-input');
+        const promptSpan = document.getElementById('prompt');
+        const chatPath = 'terminal_chat_v1';
+        
+        // --- Gun.js Setup ---
+        // Using a public peer for easy testing
+        const peers = ['https://gun-dbs.herokuapp.com/gun'];
+        gun = Gun(peers);
+        const messagesNode = gun.get(chatPath);
+
+        // --- Utility Functions ---
+
+        /** Scrolls the terminal output to the bottom */
+        const scrollToBottom = () => {
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        };
+
+        /** Appends a message to the terminal output */
+        const appendMessage = (username, text, timestamp) => {
+            const time = new Date(timestamp).toLocaleTimeString();
+            const messageElement = document.createElement('p');
+            
+            // Apply different colors for system messages, self messages, and others
+            let userClass = 'text-green-400';
+            if (username === 'SYSTEM') {
+                userClass = 'text-red-400';
+            } else if (username === currentUserId) {
+                userClass = 'text-white';
+            }
+            
+            messageElement.innerHTML = `[<span class="text-gray-500">${time}</span>] <span class="${userClass}">${username}</span>: ${text}`;
+            terminalOutput.appendChild(messageElement);
+            scrollToBottom();
+        };
+
+        /** Handles special commands like setting username */
+        const handleCommand = (text) => {
+            const parts = text.split(' ');
+            const command = parts[0];
+
+            if (command === '/user' && parts.length > 1) {
+                const newHandle = parts.slice(1).join(' ').trim();
+                if (newHandle && newHandle.length > 0) {
+                    currentUserId = newHandle;
+                    promptSpan.textContent = `${currentUserId}@terminal:~$`;
+                    appendMessage('SYSTEM', `User ID set to <span class="text-yellow-400">${currentUserId}</span>. Start chatting!`, Date.now());
+                } else {
+                    appendMessage('SYSTEM', `Error: /user command requires a handle.`, Date.now());
+                }
+                return true;
+            }
+            
+            if (command === '/clear') {
+                terminalOutput.innerHTML = '';
+                appendMessage('SYSTEM', `Terminal cleared. User ID: ${currentUserId}`, Date.now());
+                return true;
+            }
+
+            // Fallback for unknown commands
+            if (command.startsWith('/')) {
+                appendMessage('SYSTEM', `Error: Unknown command "${command}". Try /user [handle].`, Date.now());
+                return true;
+            }
+            
+            return false;
+        };
+
+        /** Sends the message to the Gun network */
+        const sendMessage = (text) => {
+            if (!text.trim()) return;
+
+            if (handleCommand(text)) {
+                chatInput.value = '';
+                return;
+            }
+
+            // Create the message object
+            const msg = {
+                user: currentUserId,
+                text: text,
+                timestamp: Date.now()
+            };
+
+            // Add the message to the collection
+            // We use a unique key (timestamp + random) to ensure order and avoid collisions
+            messagesNode.set(msg);
+            
+            chatInput.value = ''; // Clear input after sending
+        };
+
+
+        // --- Message Listener ---
+        
+        /** Listens to the Gun graph for new messages and processes them */
+        const loadMessages = () => {
+            let initialLoad = true;
+            let loadedMessages = new Map();
+
+            // Clear the initial welcome messages before loading
+            terminalOutput.innerHTML = '';
+
+            messagesNode.map().on(function(msg, key){
+                if (!msg || !msg.user || !msg.text || !msg.timestamp) return;
+
+                // Check if we've already processed this message
+                if (loadedMessages.has(key)) return;
+                loadedMessages.set(key, true);
+
+                // Add the message to the display
+                appendMessage(msg.user, msg.text, msg.timestamp);
+
+            }, { change: true });
+        };
+
+
+        // --- Event Handlers ---
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent default form submission behavior
+                sendMessage(chatInput.value);
+            }
+        });
+
+        // Initialize Gun listeners when the window loads
+        window.onload = function() {
+            // Give the connection a moment to establish before loading the data
+            setTimeout(() => {
+                appendMessage('SYSTEM', 'Connection established with decentralized peer.', Date.now());
+                
+                // IMPORTANT: Check for file:// protocol and warn the user
+                if (window.location.protocol === 'file:') {
+                    appendMessage('SYSTEM', '<span class="text-red-500">WARNING:</span> Running from local disk (file://) might block network connections due to browser security restrictions. Chat may not sync between browsers. For full functionality, use a local web server (e.g., Python\'s http.server) or upload the file online.', Date.now());
+                }
+                
+                loadMessages();
+            }, 500);
+        };
+
+        // Set initial user ID and update prompt text
+        if (typeof crypto !== 'undefined') {
+            currentUserId = `user_${crypto.randomUUID().substring(0, 4)}`;
+        }
+        promptSpan.textContent = `${currentUserId}@terminal:~$`;
+        
+    </script>
+</body>
+</html>
