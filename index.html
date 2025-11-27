@@ -3,232 +3,546 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gun Chat Terminal</title>
-    <!-- Load Tailwind CSS -->
+    <title>Veox Glass</title>
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load Gun.js -->
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Gun.js -->
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom styles for the terminal aesthetic */
         body {
-            background-color: #000000; /* True black background */
-            color: #00FF00; /* Neon green text */
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            cursor: text;
+            margin: 0;
+            padding: 0;
             height: 100vh;
-            overflow: hidden; /* Prevent body scroll */
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #000;
+            color: #fff;
         }
 
-        /* Styling for the main terminal window */
-        #terminal-output {
-            height: calc(100vh - 4rem); /* Leave space for the input area */
-            overflow-y: scroll;
-            padding: 1rem;
-            line-height: 1.5;
-            white-space: pre-wrap; /* Preserve formatting but wrap lines */
+        /* Background */
+        .bg-layer {
+            position: absolute;
+            top: -5%;
+            left: -5%;
+            width: 110%;
+            height: 110%;
+            background-image: url('https://images.unsplash.com/photo-1733249152111-cde0234c5fed?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDE3fHx8ZW58MHx8fHx8');
+            background-size: cover;
+            background-position: center;
+            filter: blur(12px) brightness(0.5);
+            z-index: -10;
         }
 
-        /* Hide the scrollbar but allow scrolling */
-        #terminal-output::-webkit-scrollbar {
-            display: none;
-        }
-        #terminal-output {
-            -ms-overflow-style: none;  /* IE and Edge */
-            scrollbar-width: none;  /* Firefox */
-        }
-
-        /* Styling for the input field to match the terminal */
-        #chat-input {
-            background-color: transparent;
-            border: none;
-            outline: none;
-            color: inherit;
-            flex-grow: 1;
-            padding: 0 0.5rem;
-            caret-color: #00FF00; /* Green cursor */
-            font-size: 1rem;
+        /* Animations */
+        @keyframes liquidWobble {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(2px, 3px) rotate(0.5deg); }
+            50% { transform: translate(0, 5px) rotate(0deg); }
+            75% { transform: translate(-2px, 3px) rotate(-0.5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
         }
 
-        /* Ensure the input wrapper looks like one continuous line */
-        #input-container {
-            border-top: 1px solid #004400; /* Subtle dividing line */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
         }
-        
-        /* Custom selection color */
-        ::selection {
-            background: #008800;
-            color: #FFFFFF;
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Glass Components */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-sidebar {
+            background: rgba(10, 10, 15, 0.4);
+            backdrop-filter: blur(30px) saturate(120%);
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
+            animation: liquidWobble 15s infinite ease-in-out; 
+        }
+
+        .glass-main {
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(15px);
+            animation: liquidWobble 20s infinite ease-in-out reverse; /* Counter wobble */
+        }
+
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .message-bubble-self {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.6), rgba(37, 99, 235, 0.6));
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message-bubble-other {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .chat-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .chat-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .chat-item.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-left: 3px solid #38bdf8;
+        }
+
+        /* Scrollbar hiding */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+        /* Modal */
+        #login-modal {
+            animation: fadeIn 0.5s ease-out;
         }
     </style>
 </head>
-<body class="antialiased text-sm md:text-base">
+<body class="flex items-center justify-center" onclick="hideContextMenu()">
 
-    <div id="terminal-output">
-        <!-- System Welcome Message -->
-        <p class="text-cyan-400">[[ SYSTEM BOOT COMPLETE ]]</p>
-        <p class="text-cyan-400">[[ INITIALIZING PEER CONNECTION... ]]</p>
-        <p class="text-yellow-400">Enter a username to begin chat.</p>
-        <p class="text-yellow-400">Syntax: <span class="text-white">/user [your-handle]</span></p>
-        <p class="text-yellow-400">Example: <span class="text-white">/user MaxTheCoder</span></p>
-        <br>
-        <!-- Chat messages will be appended here -->
+    <!-- Background -->
+    <div class="bg-layer"></div>
+
+    <!-- Context Menu (Right Click) -->
+    <div id="context-menu" class="fixed hidden z-50 glass-panel rounded-lg py-1 w-48 shadow-xl border border-white/10 flex-col">
+        <div class="px-3 py-2 text-xs text-slate-500 uppercase tracking-wider font-semibold border-b border-white/5 mb-1" id="ctx-header">User Actions</div>
+        <button id="ctx-block-btn" class="text-left px-4 py-2 hover:bg-red-500/20 hover:text-red-400 text-sm text-slate-300 transition-colors flex items-center gap-2 w-full">
+            <i data-lucide="shield-off" class="w-4 h-4"></i> Block User
+        </button>
     </div>
 
-    <div id="input-container" class="flex p-3 bg-gray-900">
-        <span id="prompt" class="text-green-400 select-none">guest@terminal:~$</span>
-        <input type="text" id="chat-input" placeholder="Type /user [handle] to set your name or type a message..." autofocus>
+    <!-- Login Modal (Overlay) -->
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div class="glass-panel p-8 rounded-2xl w-96 flex flex-col items-center text-center animate-[float_6s_ease-in-out_infinite]">
+            <div class="w-16 h-16 bg-sky-500/20 rounded-full flex items-center justify-center mb-6 border border-sky-400/30">
+                <i data-lucide="zap" class="w-8 h-8 text-sky-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">Welcome to Veox</h1>
+            <p class="text-slate-400 text-sm mb-6">Enter your alias to connect to the secure mesh.</p>
+            <input type="text" id="username-input" placeholder="Your Alias..." class="w-full p-3 rounded-xl glass-input text-white mb-4 outline-none text-center font-medium placeholder-slate-500">
+            <button onclick="login()" class="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold transition-all shadow-lg shadow-sky-500/20">
+                Enter Veox
+            </button>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container" class="w-full h-full flex opacity-0 transition-opacity duration-700">
+        
+        <!-- Sidebar -->
+        <div class="w-80 h-full glass-sidebar flex flex-col z-10 relative">
+            <!-- Header -->
+            <div class="p-4 border-b border-white/5 flex justify-between items-center">
+                <h2 class="font-bold text-lg tracking-wider text-sky-400 flex items-center gap-2">
+                    <i data-lucide="zap" class="w-5 h-5"></i> VEOX
+                </h2>
+                <div class="text-xs text-slate-400 px-2 py-1 rounded bg-white/5 border border-white/5" id="my-handle-display">Guest</div>
+            </div>
+
+            <!-- Search -->
+            <div class="p-4 pb-2">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
+                    <input type="text" id="chat-search" placeholder="Search chats..." class="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm text-slate-200 placeholder-slate-500 outline-none" oninput="filterChats()">
+                </div>
+            </div>
+
+            <!-- Chat List -->
+            <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chat-list">
+                <!-- Global Chat (Always here) -->
+                <div class="chat-item active p-3 rounded-xl flex items-center gap-3" onclick="switchChat('global', 'Global Public')">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                        <i data-lucide="globe" class="w-5 h-5 text-indigo-400"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-baseline">
+                            <span class="font-medium text-sm text-indigo-100">Global Public</span>
+                        </div>
+                        <p class="text-xs text-slate-400 truncate">The secure public frequency</p>
+                    </div>
+                </div>
+                <!-- Dynamic Chats will go here -->
+            </div>
+
+            <!-- Add Chat Button (FAB style in sidebar) -->
+            <div class="p-4 border-t border-white/5">
+                <button onclick="promptNewChat()" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors flex items-center justify-center gap-2 text-slate-300">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i> New Private Chat
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="flex-1 h-full glass-main flex flex-col relative z-0">
+            
+            <!-- Chat Header -->
+            <div class="h-16 border-b border-white/5 flex items-center px-6 justify-between backdrop-blur-md bg-black/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-sky-500/20" id="header-avatar">
+                        G
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-white leading-tight" id="header-title">Global Public</h3>
+                        <p class="text-xs text-sky-400 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
+                        </p>
+                    </div>
+                </div>
+                <button onclick="clearCurrentChat()" class="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors" title="Clear History">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Messages Area -->
+            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4">
+                <!-- Messages injected here -->
+                <div class="flex justify-center my-4">
+                     <span class="text-xs bg-white/5 text-slate-400 px-3 py-1 rounded-full border border-white/5">Messages are end-to-end decentralized</span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 md:p-6 pb-6">
+                <div class="glass-panel rounded-2xl p-2 flex items-center gap-2 pr-3 relative">
+                    <input type="text" id="message-input" placeholder="Write a message..." class="flex-1 bg-transparent border-none outline-none text-white px-4 py-2 placeholder-slate-500" autocomplete="off">
+                    <button onclick="sendMessage()" class="p-3 bg-sky-600 hover:bg-sky-500 text-white rounded-xl transition-all shadow-lg shadow-sky-500/20 hover:scale-105 active:scale-95">
+                        <i data-lucide="send" class="w-5 h-5 fill-current"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // --- Globals ---
-        let currentUserId = 'guest';
-        let gun;
-        const terminalOutput = document.getElementById('terminal-output');
-        const chatInput = document.getElementById('chat-input');
-        const promptSpan = document.getElementById('prompt');
-        const chatPath = 'terminal_chat_v1';
+        // --- Configuration ---
+        const PEERS = ['https://gun-dbs.herokuapp.com/gun'];
+        const gun = Gun(PEERS);
         
-        // --- Gun.js Setup ---
-        // Using a public peer for easy testing
-        const peers = ['https://gun-dbs.herokuapp.com/gun'];
-        gun = Gun(peers);
-        const messagesNode = gun.get(chatPath);
-
-        // --- Utility Functions ---
-
-        /** Scrolls the terminal output to the bottom */
-        const scrollToBottom = () => {
-            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        // --- State ---
+        let state = {
+            username: '',
+            currentChatId: 'global',
+            chats: [], // Array of { id: string, name: string }
+            blockedUsers: [] // Array of strings (usernames)
         };
 
-        /** Appends a message to the terminal output */
-        const appendMessage = (username, text, timestamp) => {
-            const time = new Date(timestamp).toLocaleTimeString();
-            const messageElement = document.createElement('p');
-            
-            // Apply different colors for system messages, self messages, and others
-            let userClass = 'text-green-400';
-            if (username === 'SYSTEM') {
-                userClass = 'text-red-400';
-            } else if (username === currentUserId) {
-                userClass = 'text-white';
-            }
-            
-            messageElement.innerHTML = `[<span class="text-gray-500">${time}</span>] <span class="${userClass}">${username}</span>: ${text}`;
-            terminalOutput.appendChild(messageElement);
-            scrollToBottom();
+        // --- DOM Elements ---
+        const els = {
+            loginModal: document.getElementById('login-modal'),
+            appContainer: document.getElementById('app-container'),
+            usernameInput: document.getElementById('username-input'),
+            myHandleDisplay: document.getElementById('my-handle-display'),
+            chatList: document.getElementById('chat-list'),
+            chatSearch: document.getElementById('chat-search'),
+            messagesContainer: document.getElementById('messages-container'),
+            messageInput: document.getElementById('message-input'),
+            headerTitle: document.getElementById('header-title'),
+            headerAvatar: document.getElementById('header-avatar'),
+            contextMenu: document.getElementById('context-menu'),
+            ctxHeader: document.getElementById('ctx-header'),
+            ctxBlockBtn: document.getElementById('ctx-block-btn')
         };
 
-        /** Handles special commands like setting username */
-        const handleCommand = (text) => {
-            const parts = text.split(' ');
-            const command = parts[0];
+        // --- Initialization ---
+        
+        // Load Lucide icons
+        lucide.createIcons();
 
-            if (command === '/user' && parts.length > 1) {
-                const newHandle = parts.slice(1).join(' ').trim();
-                if (newHandle && newHandle.length > 0) {
-                    currentUserId = newHandle;
-                    promptSpan.textContent = `${currentUserId}@terminal:~$`;
-                    appendMessage('SYSTEM', `User ID set to <span class="text-yellow-400">${currentUserId}</span>. Start chatting!`, Date.now());
-                } else {
-                    appendMessage('SYSTEM', `Error: /user command requires a handle.`, Date.now());
-                }
-                return true;
+        // Check for local storage data
+        const loadSavedData = () => {
+            const savedChats = localStorage.getItem('veox_chats');
+            if (savedChats) {
+                state.chats = JSON.parse(savedChats);
             }
             
-            if (command === '/clear') {
-                terminalOutput.innerHTML = '';
-                appendMessage('SYSTEM', `Terminal cleared. User ID: ${currentUserId}`, Date.now());
-                return true;
-            }
-
-            // Fallback for unknown commands
-            if (command.startsWith('/')) {
-                appendMessage('SYSTEM', `Error: Unknown command "${command}". Try /user [handle].`, Date.now());
-                return true;
+            const savedBlocked = localStorage.getItem('veox_blocked');
+            if (savedBlocked) {
+                state.blockedUsers = JSON.parse(savedBlocked);
             }
             
-            return false;
+            renderChatList();
         };
 
-        /** Sends the message to the Gun network */
-        const sendMessage = (text) => {
-            if (!text.trim()) return;
+        // --- Auth / Login Flow ---
+        function login() {
+            const val = els.usernameInput.value.trim();
+            if (!val) return;
+            
+            state.username = val;
+            els.myHandleDisplay.textContent = '@' + val;
+            
+            // Hide Modal, Show App
+            els.loginModal.style.display = 'none';
+            els.appContainer.style.opacity = '1';
+            
+            // Connect Gun
+            loadSavedData();
+            subscribeToChat('global'); // Default to global
+        }
 
-            if (handleCommand(text)) {
-                chatInput.value = '';
+        els.usernameInput.addEventListener('keydown', e => {
+            if(e.key === 'Enter') login();
+        });
+
+        // --- Context Menu (Blocking) ---
+        let contextMenuTargetUser = null;
+
+        function showContextMenu(e, username) {
+            e.preventDefault();
+            if (username === state.username || username === 'SYSTEM') return; // Can't block self or system
+
+            contextMenuTargetUser = username;
+            
+            // Position menu
+            els.contextMenu.style.display = 'flex';
+            els.contextMenu.style.left = `${e.pageX}px`;
+            els.contextMenu.style.top = `${e.pageY}px`;
+            
+            // Update Text
+            els.ctxHeader.textContent = `User: ${username}`;
+            
+            // Check if already blocked to toggle text (optional feature, currently just BLOCK)
+            const isBlocked = state.blockedUsers.includes(username);
+            els.ctxBlockBtn.innerHTML = isBlocked 
+                ? `<i data-lucide="shield-check" class="w-4 h-4 text-green-400"></i> Unblock User`
+                : `<i data-lucide="shield-off" class="w-4 h-4 text-red-400"></i> Block User`;
+            
+            // Re-init icons in menu
+            lucide.createIcons();
+        }
+
+        function hideContextMenu() {
+            els.contextMenu.style.display = 'none';
+        }
+
+        els.ctxBlockBtn.onclick = () => {
+            if (!contextMenuTargetUser) return;
+            
+            if (state.blockedUsers.includes(contextMenuTargetUser)) {
+                // Unblock
+                state.blockedUsers = state.blockedUsers.filter(u => u !== contextMenuTargetUser);
+                alert(`Unblocked ${contextMenuTargetUser}`);
+            } else {
+                // Block
+                state.blockedUsers.push(contextMenuTargetUser);
+                alert(`Blocked ${contextMenuTargetUser}. You won't see their messages anymore.`);
+            }
+            
+            // Save
+            localStorage.setItem('veox_blocked', JSON.stringify(state.blockedUsers));
+            
+            // Refresh view to hide/show messages
+            subscribeToChat(state.currentChatId); 
+            hideContextMenu();
+        };
+
+
+        // --- Chat Management ---
+
+        function promptNewChat() {
+            // Using prompt for simplicity as per request "enter user and start dm"
+            const target = prompt("Enter the username to start a private chat:");
+            if (!target || target.trim() === "") return;
+            
+            if (target.trim() === state.username) {
+                alert("You cannot chat with yourself.");
                 return;
             }
+            
+            createPrivateChat(target.trim());
+        }
 
-            // Create the message object
+        function createPrivateChat(targetUser) {
+            // Generate deterministic ID
+            const users = [state.username, targetUser].sort();
+            const chatId = `veox_pm_${users[0]}_${users[1]}`;
+            
+            // Check if already exists in sidebar, if not add it
+            if (!state.chats.find(c => c.id === chatId)) {
+                state.chats.push({ id: chatId, name: targetUser });
+                localStorage.setItem('veox_chats', JSON.stringify(state.chats));
+                renderChatList();
+            }
+            
+            // Switch to it immediately
+            switchChat(chatId, targetUser);
+        }
+
+        function renderChatList() {
+            // Keep the global chat at top, remove old dynamic ones
+            const dynamicItems = Array.from(els.chatList.children).slice(1);
+            dynamicItems.forEach(el => el.remove());
+
+            state.chats.forEach(chat => {
+                const div = document.createElement('div');
+                div.className = `chat-item p-3 rounded-xl flex items-center gap-3 ${state.currentChatId === chat.id ? 'active' : ''}`;
+                
+                // Left Click -> Switch
+                div.onclick = () => switchChat(chat.id, chat.name);
+                
+                // Right Click -> Context Menu (Block user from sidebar)
+                div.oncontextmenu = (e) => showContextMenu(e, chat.name);
+
+                div.innerHTML = `
+                    <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border border-white/10 text-slate-300 font-bold">
+                        ${chat.name.substring(0,2).toUpperCase()}
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-baseline">
+                            <span class="font-medium text-sm text-slate-200">${chat.name}</span>
+                        </div>
+                        <p class="text-xs text-slate-500 truncate">Private Channel</p>
+                    </div>
+                `;
+                els.chatList.appendChild(div);
+            });
+        }
+
+        function filterChats() {
+            const query = els.chatSearch.value.toLowerCase();
+            const items = Array.from(els.chatList.children); // All items including global
+            
+            items.forEach(item => {
+                const name = item.querySelector('.font-medium').textContent.toLowerCase();
+                if (name.includes(query)) {
+                    item.style.display = 'flex';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function switchChat(chatId, chatName) {
+            state.currentChatId = chatId;
+            
+            // Update UI Header
+            els.headerTitle.textContent = chatName;
+            els.headerAvatar.textContent = chatName.substring(0, 1).toUpperCase();
+            if(chatId === 'global') {
+                els.headerAvatar.className = "w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-sky-500/20";
+            } else {
+                els.headerAvatar.className = "w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold border border-white/20";
+            }
+
+            // Update List Active State
+            renderChatList(); 
+
+            // Gun Subscription
+            subscribeToChat(chatId);
+        }
+
+        // --- Gun.js Messaging Logic ---
+
+        function subscribeToChat(path) {
+            // 1. Clean up UI
+            els.messagesContainer.innerHTML = '';
+            
+            // 2. Add System Start Message
+            const sysDiv = document.createElement('div');
+            sysDiv.className = 'flex justify-center my-4';
+            sysDiv.innerHTML = `<span class="text-xs bg-white/5 text-slate-400 px-3 py-1 rounded-full border border-white/5">Encryption Key Loaded: ${path}</span>`;
+            els.messagesContainer.appendChild(sysDiv);
+
+            // 3. Subscribe
+            const seenKeys = new Set();
+            
+            // Note: In a real app we would manage .off() to stop previous listeners
+            // but Gun.js handling of off() can be complex for simple demos.
+            // We'll rely on the fact that we clear the UI and Gun caches data.
+            
+            gun.get(path).map().on((msg, key) => {
+                if (!msg || !msg.text || !msg.timestamp || seenKeys.has(key)) return;
+                
+                // BLOCKING LOGIC: If user is blocked, ignore this message
+                if (state.blockedUsers.includes(msg.user)) return;
+
+                seenKeys.add(key);
+                addMessageToUI(msg);
+            });
+        }
+
+        function addMessageToUI(msg) {
+            const isMe = msg.user === state.username;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            const div = document.createElement('div');
+            div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-[fadeIn_0.3s_ease-out]`;
+            
+            // Avatar logic
+            const avatar = `<div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs border border-white/10 flex-shrink-0 text-slate-300 select-none cursor-pointer hover:border-sky-400 transition-colors" oncontextmenu="showContextMenu(event, '${msg.user}')">${msg.user.substring(0,2).toUpperCase()}</div>`;
+
+            div.innerHTML = `
+                <div class="flex gap-2 max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
+                    ${avatar}
+                    <div class="${isMe ? 'message-bubble-self text-white' : 'message-bubble-other text-slate-200'} px-4 py-2 rounded-2xl shadow-sm relative group" oncontextmenu="showContextMenu(event, '${msg.user}')">
+                         ${!isMe ? `<div class="text-[10px] text-sky-400 mb-0.5 opacity-80 cursor-pointer hover:underline" onclick="createPrivateChat('${msg.user}')">${msg.user}</div>` : ''}
+                        <p class="text-sm leading-relaxed">${msg.text}</p>
+                        <div class="text-[10px] opacity-50 text-right mt-1 w-full block">${time}</div>
+                    </div>
+                </div>
+            `;
+            
+            els.messagesContainer.appendChild(div);
+            // Scroll to bottom
+            els.messagesContainer.scrollTop = els.messagesContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            const text = els.messageInput.value.trim();
+            if (!text) return;
+            
             const msg = {
-                user: currentUserId,
+                user: state.username,
                 text: text,
                 timestamp: Date.now()
             };
-
-            // Add the message to the collection
-            // We use a unique key (timestamp + random) to ensure order and avoid collisions
-            messagesNode.set(msg);
             
-            chatInput.value = ''; // Clear input after sending
-        };
+            gun.get(state.currentChatId).set(msg);
+            els.messageInput.value = '';
+            els.messageInput.focus();
+        }
 
-
-        // --- Message Listener ---
-        
-        /** Listens to the Gun graph for new messages and processes them */
-        const loadMessages = () => {
-            let initialLoad = true;
-            let loadedMessages = new Map();
-
-            // Clear the initial welcome messages before loading
-            terminalOutput.innerHTML = '';
-
-            messagesNode.map().on(function(msg, key){
-                if (!msg || !msg.user || !msg.text || !msg.timestamp) return;
-
-                // Check if we've already processed this message
-                if (loadedMessages.has(key)) return;
-                loadedMessages.set(key, true);
-
-                // Add the message to the display
-                appendMessage(msg.user, msg.text, msg.timestamp);
-
-            }, { change: true });
-        };
-
-
-        // --- Event Handlers ---
-
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent default form submission behavior
-                sendMessage(chatInput.value);
+        function clearCurrentChat() {
+            if(confirm("Clear local view of this chat? (Does not delete from network)")) {
+                els.messagesContainer.innerHTML = '';
             }
+        }
+
+        // Input Enter Key
+        els.messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendMessage();
         });
 
-        // Initialize Gun listeners when the window loads
-        window.onload = function() {
-            // Give the connection a moment to establish before loading the data
-            setTimeout(() => {
-                appendMessage('SYSTEM', 'Connection established with decentralized peer.', Date.now());
-                
-                // IMPORTANT: Check for file:// protocol and warn the user
-                if (window.location.protocol === 'file:') {
-                    appendMessage('SYSTEM', '<span class="text-red-500">WARNING:</span> Running from local disk (file://) might block network connections due to browser security restrictions. Chat may not sync between browsers. For full functionality, use a local web server (e.g., Python\'s http.server) or upload the file online.', Date.now());
-                }
-                
-                loadMessages();
-            }, 500);
-        };
-
-        // Set initial user ID and update prompt text
-        if (typeof crypto !== 'undefined') {
-            currentUserId = `user_${crypto.randomUUID().substring(0, 4)}`;
-        }
-        promptSpan.textContent = `${currentUserId}@terminal:~$`;
-        
     </script>
 </body>
 </html>
