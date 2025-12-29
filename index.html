@@ -3,545 +3,494 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Veox Glass</title>
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Gun.js -->
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Veox / Wave Challenge List</title>
+    <!-- Pusab Font (Official GD Font) -->
+    <link href="https://fonts.cdnfonts.com/css/pusab" rel="stylesheet">
     <style>
-        body {
+        :root {
+            /* Official GD Palette */
+            --gd-bg-top: #004488;
+            --gd-bg-btm: #001133;
+            
+            /* The "List" Brown Palette */
+            --panel-brown-light: #BF7240;
+            --panel-brown-dark: #A1582C;
+            --panel-border: #4A2810;
+            --slot-bg: rgba(0, 0, 0, 0.4); 
+            
+            --gd-gold: #FFCC00;
+            --gd-white: #FFFFFF;
+            
+            /* Text Stroke Settings */
+            --stroke-thick: 2.5px; /* Thicker for sharper look */
+            --stroke-thin: 1.2px; 
+        }
+
+        * {
             margin: 0;
             padding: 0;
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden;
-            font-family: 'Inter', sans-serif;
-            background-color: #000;
+            box-sizing: border-box;
+            font-family: 'Pusab', sans-serif;
+            user-select: none;
+            /* Force sharp rendering */
+            -webkit-font-smoothing: none; 
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        body {
+            background: linear-gradient(180deg, var(--gd-bg-top) 0%, var(--gd-bg-btm) 100%);
+            color: var(--gd-white);
+            min-height: 100vh;
+            overflow-x: hidden;
+            overflow-y: scroll;
+        }
+
+        /* GD Style Scrollbar */
+        ::-webkit-scrollbar { width: 14px; }
+        ::-webkit-scrollbar-track { 
+            background: #000; 
+            border-left: 2px solid #4A2810;
+        }
+        ::-webkit-scrollbar-thumb { 
+            background: #444;
+            border: 2px solid #fff;
+            border-radius: 6px;
+        }
+
+        /* Background Grid (Sharpened) */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.08) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.08) 2px, transparent 2px);
+            background-size: 80px 80px;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* --- UI COMPONENTS --- */
+
+        /* Standard GD Text (Headers) - Pitch Black Shadow */
+        .gd-text-outline {
+            -webkit-text-stroke: var(--stroke-thick) black;
+            text-shadow: 4px 4px 0px #000000; /* No alpha, pure black */
+            letter-spacing: 1px;
+            font-weight: 400; /* Pusab is bold by default, this fixes artifacts */
+        }
+
+        /* Small Text (Readable) */
+        .gd-text-small {
+            -webkit-text-stroke: var(--stroke-thin) black;
+            text-shadow: 2px 2px 0px #000000;
+            letter-spacing: 0.5px;
+        }
+
+        /* Navbar - No Blur, Solid Dark */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.8); /* Hard dark */
+            border-bottom: 4px solid #000;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 2.2rem;
+            color: var(--gd-gold);
+            -webkit-text-stroke: 2px black;
+            text-shadow: 4px 4px 0px #000;
+        }
+        .logo span { color: #fff; }
+
+        .nav-links { display: flex; gap: 20px; }
+
+        /* Generic GD Button */
+        .gd-btn {
+            height: 50px;
+            padding: 0 20px;
+            border: 3px solid #fff;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 1rem;
+            -webkit-text-stroke: 1.2px black;
+            text-shadow: 2px 2px 0 #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            /* Hard shadow, no blur */
+            box-shadow: 0px 6px 0px rgba(0,0,0,0.6); 
+            transition: 0.05s;
+            position: relative;
+            top: 0;
+        }
+        .gd-btn:active { 
+            top: 4px; 
+            box-shadow: 0px 2px 0px rgba(0,0,0,0.6); 
+        }
+
+        .btn-blue { background: linear-gradient(180deg, #00CFFF 0%, #0066FF 100%); }
+        .btn-gold { background: linear-gradient(180deg, #FFDD44 0%, #CC8800 100%); }
+        .btn-discord { background: linear-gradient(180deg, #7289DA 0%, #5865F2 100%); }
+        
+        .btn-discord img { width: 24px; filter: drop-shadow(2px 2px 0 #000); margin-right: 8px; }
+
+        /* Main Layout */
+        main {
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 0 20px;
+        }
+
+        /* The Big Brown Panel - Hard Shadows */
+        .gd-panel {
+            background-color: var(--panel-brown-light);
+            border: 6px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 20px;
+            /* Inner shadow for depth + Hard drop shadow */
+            box-shadow: 
+                inset 0 0 0 4px #A1582C, 
+                0px 15px 0px rgba(0,0,0,0.6); 
+            position: relative;
+        }
+        
+        /* Corner Screws */
+        .panel-screw {
+            position: absolute;
+            width: 24px; height: 24px;
+            background: radial-gradient(circle at 30% 30%, #fff 5%, #888 30%, #444 100%);
+            border-radius: 50%;
+            border: 2px solid #000;
+            box-shadow: 2px 2px 0px #000;
+            z-index: 2;
+        }
+        .screw-tl { top: 12px; left: 12px; }
+        .screw-tr { top: 12px; right: 12px; }
+        .screw-bl { bottom: 12px; left: 12px; }
+        .screw-br { bottom: 12px; right: 12px; }
+
+        .header-section { text-align: center; margin-bottom: 25px; }
+        .header-section h1 {
+            font-size: 3.5rem;
+            color: var(--gd-gold);
+            margin-bottom: 5px;
+        }
+
+        /* Input / Controls */
+        .controls-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 12px;
+            border-radius: 12px;
+            border: 3px solid var(--panel-border);
+        }
+
+        .gd-input {
+            flex-grow: 1;
+            background: #5D3117;
+            border: 3px solid #281507;
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #fff;
+            font-size: 1.2rem;
+            outline: none;
+            -webkit-text-stroke: 0;
+            text-shadow: none;
+            box-shadow: inset 0 4px 0 rgba(0,0,0,0.3);
+        }
+        .gd-input::placeholder { color: #aaa; }
+
+        /* List Items */
+        .level-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .level-card {
+            height: 95px;
+            background-color: var(--slot-bg);
+            border-bottom: 4px solid rgba(0,0,0,0.5); /* Hard line */
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
+            transition: 0.05s;
+        }
+        .level-card:hover { 
+            background-color: rgba(255,255,255,0.15); 
+            border-color: rgba(0,0,0,0.8);
+        }
+
+        .rank-num {
+            width: 60px;
+            font-size: 2rem;
+            text-align: center;
+            margin-right: 15px;
             color: #fff;
         }
 
-        /* Background */
-        .bg-layer {
-            position: absolute;
-            top: -5%;
-            left: -5%;
-            width: 110%;
-            height: 110%;
-            background-image: url('https://images.unsplash.com/photo-1733249152111-cde0234c5fed?fm=jpg&q=60&w=3000&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1yZWxhdGVkfDE3fHx8ZW58MHx8fHx8');
-            background-size: cover;
-            background-position: center;
-            filter: blur(12px) brightness(0.5);
-            z-index: -10;
+        .diff-img {
+            width: 64px;
+            height: 64px;
+            margin-right: 20px;
+            filter: drop-shadow(4px 4px 0px rgba(0,0,0,0.6));
         }
 
-        /* Animations */
-        @keyframes liquidWobble {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(2px, 3px) rotate(0.5deg); }
-            50% { transform: translate(0, 5px) rotate(0deg); }
-            75% { transform: translate(-2px, 3px) rotate(-0.5deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
+        .level-info { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        
+        .level-name {
+            font-size: 1.9rem;
+            color: var(--gd-gold);
+            line-height: 1.1;
+            margin-bottom: 5px;
+        }
+        
+        .level-author {
+            font-size: 1.1rem;
+            color: #ddd;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .level-author span { color: #fff; }
+        
+        /* Verifier Tag */
+        .verifier-tag {
+            color: #44FF44;
+            font-size: 0.95rem;
+            -webkit-text-stroke: 0.8px black;
+            text-shadow: 2px 2px 0 #000;
         }
 
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* Glass Components */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px) saturate(150%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-
-        .glass-sidebar {
-            background: rgba(10, 10, 15, 0.4);
-            backdrop-filter: blur(30px) saturate(120%);
-            border-right: 1px solid rgba(255, 255, 255, 0.08);
-            animation: liquidWobble 15s infinite ease-in-out; 
-        }
-
-        .glass-main {
-            background: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(15px);
-            animation: liquidWobble 20s infinite ease-in-out reverse; /* Counter wobble */
-        }
-
-        .glass-input {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-        .glass-input:focus {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.3);
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
-        }
-
-        .message-bubble-self {
-            background: linear-gradient(135deg, rgba(56, 189, 248, 0.6), rgba(37, 99, 235, 0.6));
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .message-bubble-other {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .chat-item {
-            transition: all 0.2s ease;
+        .view-btn-img {
+            width: 55px;
             cursor: pointer;
+            filter: drop-shadow(4px 4px 0 #000);
+            transition: 0.05s;
         }
-        .chat-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-        .chat-item.active {
-            background: rgba(56, 189, 248, 0.15);
-            border-left: 3px solid #38bdf8;
-        }
+        .view-btn-img:active { transform: scale(0.95) translateY(2px); filter: drop-shadow(2px 2px 0 #000); }
 
-        /* Scrollbar hiding */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        /* Views */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
 
-        /* Modal */
-        #login-modal {
-            animation: fadeIn 0.5s ease-out;
+        /* Leaderboard Table */
+        .lb-table { width: 100%; border-collapse: collapse; }
+        .lb-table td, .lb-table th { 
+            padding: 16px 14px; 
+            border-bottom: 3px solid rgba(0,0,0,0.5);
+            text-align: left;
         }
+        .lb-table th { color: var(--gd-gold); font-size: 1.3rem; }
+        .lb-rank { color: #fff; width: 60px; }
+        .lb-pts { color: var(--gd-gold); text-align: right; }
+        
+        .lb-table td { font-size: 1.2rem; }
+
+        /* Roulette */
+        .roulette-box { text-align: center; padding: 60px; }
+        .roulette-res { font-size: 3.2rem; margin: 30px 0; min-height: 60px; color: #fff; }
+
     </style>
 </head>
-<body class="flex items-center justify-center" onclick="hideContextMenu()">
+<body>
 
-    <!-- Background -->
-    <div class="bg-layer"></div>
+    <div class="bg-grid"></div>
 
-    <!-- Context Menu (Right Click) -->
-    <div id="context-menu" class="fixed hidden z-50 glass-panel rounded-lg py-1 w-48 shadow-xl border border-white/10 flex-col">
-        <div class="px-3 py-2 text-xs text-slate-500 uppercase tracking-wider font-semibold border-b border-white/5 mb-1" id="ctx-header">User Actions</div>
-        <button id="ctx-block-btn" class="text-left px-4 py-2 hover:bg-red-500/20 hover:text-red-400 text-sm text-slate-300 transition-colors flex items-center gap-2 w-full">
-            <i data-lucide="shield-off" class="w-4 h-4"></i> Block User
-        </button>
-    </div>
-
-    <!-- Login Modal (Overlay) -->
-    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div class="glass-panel p-8 rounded-2xl w-96 flex flex-col items-center text-center animate-[float_6s_ease-in-out_infinite]">
-            <div class="w-16 h-16 bg-sky-500/20 rounded-full flex items-center justify-center mb-6 border border-sky-400/30">
-                <i data-lucide="zap" class="w-8 h-8 text-sky-400"></i>
-            </div>
-            <h1 class="text-2xl font-bold mb-2">Welcome to Veox</h1>
-            <p class="text-slate-400 text-sm mb-6">Enter your alias to connect to the secure mesh.</p>
-            <input type="text" id="username-input" placeholder="Your Alias..." class="w-full p-3 rounded-xl glass-input text-white mb-4 outline-none text-center font-medium placeholder-slate-500">
-            <button onclick="login()" class="w-full py-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold transition-all shadow-lg shadow-sky-500/20">
-                Enter Veox
-            </button>
+    <nav>
+        <div class="logo">VEOX <span>LADDER</span></div>
+        <div class="nav-links">
+            <button class="gd-btn btn-blue" onclick="switchView('home')">Lists</button>
+            <button class="gd-btn btn-blue" onclick="switchView('leaderboard')">Stats</button>
+            <button class="gd-btn btn-gold" onclick="switchView('roulette')">Roulette</button>
         </div>
-    </div>
+        <a href="https://discordapp.com/channels/1192395532157583483/1454997921203228970" target="_blank" class="gd-btn btn-discord">
+            <img src="https://static.cdnlogo.com/logos/d/64/discord.png" alt="">
+            Submit
+        </a>
+    </nav>
 
-    <!-- App Container -->
-    <div id="app-container" class="w-full h-full flex opacity-0 transition-opacity duration-700">
+    <main>
         
-        <!-- Sidebar -->
-        <div class="w-80 h-full glass-sidebar flex flex-col z-10 relative">
-            <!-- Header -->
-            <div class="p-4 border-b border-white/5 flex justify-between items-center">
-                <h2 class="font-bold text-lg tracking-wider text-sky-400 flex items-center gap-2">
-                    <i data-lucide="zap" class="w-5 h-5"></i> VEOX
-                </h2>
-                <div class="text-xs text-slate-400 px-2 py-1 rounded bg-white/5 border border-white/5" id="my-handle-display">Guest</div>
-            </div>
+        <!-- HOME: Level Browser -->
+        <div id="home-view" class="view-section active">
+            <div class="gd-panel">
+                <!-- Corner Screws -->
+                <div class="panel-screw screw-tl"></div><div class="panel-screw screw-tr"></div>
+                <div class="panel-screw screw-bl"></div><div class="panel-screw screw-br"></div>
 
-            <!-- Search -->
-            <div class="p-4 pb-2">
-                <div class="relative">
-                    <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
-                    <input type="text" id="chat-search" placeholder="Search chats..." class="w-full pl-10 pr-4 py-2.5 rounded-xl glass-input text-sm text-slate-200 placeholder-slate-500 outline-none" oninput="filterChats()">
+                <div class="header-section">
+                    <h1 class="gd-text-outline">Wave Challenge List</h1>
                 </div>
-            </div>
 
-            <!-- Chat List -->
-            <div class="flex-1 overflow-y-auto p-2 space-y-1" id="chat-list">
-                <!-- Global Chat (Always here) -->
-                <div class="chat-item active p-3 rounded-xl flex items-center gap-3" onclick="switchChat('global', 'Global Public')">
-                    <div class="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                        <i data-lucide="globe" class="w-5 h-5 text-indigo-400"></i>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-baseline">
-                            <span class="font-medium text-sm text-indigo-100">Global Public</span>
-                        </div>
-                        <p class="text-xs text-slate-400 truncate">The secure public frequency</p>
-                    </div>
+                <div class="controls-bar">
+                    <input type="text" class="gd-input" id="searchInput" placeholder="Search...">
+                    <button class="gd-btn btn-blue" onclick="sortLevels('asc')">Asc</button>
+                    <button class="gd-btn btn-blue" onclick="sortLevels('desc')">Desc</button>
                 </div>
-                <!-- Dynamic Chats will go here -->
-            </div>
 
-            <!-- Add Chat Button (FAB style in sidebar) -->
-            <div class="p-4 border-t border-white/5">
-                <button onclick="promptNewChat()" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-sm font-medium transition-colors flex items-center justify-center gap-2 text-slate-300">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i> New Private Chat
-                </button>
-            </div>
-        </div>
-
-        <!-- Main Chat Area -->
-        <div class="flex-1 h-full glass-main flex flex-col relative z-0">
-            
-            <!-- Chat Header -->
-            <div class="h-16 border-b border-white/5 flex items-center px-6 justify-between backdrop-blur-md bg-black/10">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-sky-500/20" id="header-avatar">
-                        G
-                    </div>
-                    <div>
-                        <h3 class="font-semibold text-white leading-tight" id="header-title">Global Public</h3>
-                        <p class="text-xs text-sky-400 flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online
-                        </p>
-                    </div>
-                </div>
-                <button onclick="clearCurrentChat()" class="p-2 hover:bg-white/5 rounded-full text-slate-400 transition-colors" title="Clear History">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-
-            <!-- Messages Area -->
-            <div id="messages-container" class="flex-1 overflow-y-auto p-6 space-y-4">
-                <!-- Messages injected here -->
-                <div class="flex justify-center my-4">
-                     <span class="text-xs bg-white/5 text-slate-400 px-3 py-1 rounded-full border border-white/5">Messages are end-to-end decentralized</span>
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="p-4 md:p-6 pb-6">
-                <div class="glass-panel rounded-2xl p-2 flex items-center gap-2 pr-3 relative">
-                    <input type="text" id="message-input" placeholder="Write a message..." class="flex-1 bg-transparent border-none outline-none text-white px-4 py-2 placeholder-slate-500" autocomplete="off">
-                    <button onclick="sendMessage()" class="p-3 bg-sky-600 hover:bg-sky-500 text-white rounded-xl transition-all shadow-lg shadow-sky-500/20 hover:scale-105 active:scale-95">
-                        <i data-lucide="send" class="w-5 h-5 fill-current"></i>
-                    </button>
+                <div class="level-list" id="levelContainer">
+                    <!-- JS Injects Rows -->
                 </div>
             </div>
         </div>
 
-    </div>
+        <!-- LEADERBOARD -->
+        <div id="leaderboard-view" class="view-section">
+            <div class="gd-panel">
+                <div class="panel-screw screw-tl"></div><div class="panel-screw screw-tr"></div>
+                <div class="panel-screw screw-bl"></div><div class="panel-screw screw-br"></div>
+                
+                <div class="header-section"><h1 class="gd-text-outline">Top Players</h1></div>
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th class="gd-text-small">#</th>
+                            <th class="gd-text-small">Player</th>
+                            <th class="gd-text-small">Count</th>
+                            <th style="text-align:right" class="gd-text-small">Pts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lbBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ROULETTE -->
+        <div id="roulette-view" class="view-section">
+            <div class="gd-panel roulette-box">
+                <div class="panel-screw screw-tl"></div><div class="panel-screw screw-tr"></div>
+                <div class="panel-screw screw-bl"></div><div class="panel-screw screw-br"></div>
+                
+                <h1 class="gd-text-outline">Demon Roulette</h1>
+                <p class="gd-text-small" style="margin-top:20px; color:#ddd; font-size:1.3rem;">Your Challenge:</p>
+                <div class="roulette-res gd-text-outline" id="rouletteResult">???</div>
+                <button class="gd-btn btn-gold" style="font-size:1.6rem; padding: 15px 50px; height: 70px;" onclick="spinRoulette()">SPIN</button>
+            </div>
+        </div>
+
+    </main>
 
     <script>
-        // --- Configuration ---
-        const PEERS = ['https://gun-dbs.herokuapp.com/gun'];
-        const gun = Gun(PEERS);
-        
-        // --- State ---
-        let state = {
-            username: '',
-            currentChatId: 'global',
-            chats: [], // Array of { id: string, name: string }
-            blockedUsers: [] // Array of strings (usernames)
+        /* ================= DATA ================= */
+        // Using GDBrowser assets for faces
+        const ASSETS = {
+            extreme: "https://gdbrowser.com/assets/difficulties/demon-extreme-featured.png",
+            insane: "https://gdbrowser.com/assets/difficulties/demon-insane-featured.png",
+            hard: "https://gdbrowser.com/assets/difficulties/demon-hard-featured.png",
+            viewBtn: "https://gdbrowser.com/assets/view.png"
         };
 
-        // --- DOM Elements ---
-        const els = {
-            loginModal: document.getElementById('login-modal'),
-            appContainer: document.getElementById('app-container'),
-            usernameInput: document.getElementById('username-input'),
-            myHandleDisplay: document.getElementById('my-handle-display'),
-            chatList: document.getElementById('chat-list'),
-            chatSearch: document.getElementById('chat-search'),
-            messagesContainer: document.getElementById('messages-container'),
-            messageInput: document.getElementById('message-input'),
-            headerTitle: document.getElementById('header-title'),
-            headerAvatar: document.getElementById('header-avatar'),
-            contextMenu: document.getElementById('context-menu'),
-            ctxHeader: document.getElementById('ctx-header'),
-            ctxBlockBtn: document.getElementById('ctx-block-btn')
-        };
+        const levelsData = [
+            { rank: "-", name: "-", creator: "-", verifier: "-", id: "-" }
+        ]; 
 
-        // --- Initialization ---
-        
-        // Load Lucide icons
-        lucide.createIcons();
+        const usersData = [
+            { name: "LordSPKOfficiall", records: 0, points: 0 },
+        ];
 
-        // Check for local storage data
-        const loadSavedData = () => {
-            const savedChats = localStorage.getItem('veox_chats');
-            if (savedChats) {
-                state.chats = JSON.parse(savedChats);
-            }
-            
-            const savedBlocked = localStorage.getItem('veox_blocked');
-            if (savedBlocked) {
-                state.blockedUsers = JSON.parse(savedBlocked);
-            }
-            
-            renderChatList();
-        };
+        /* ================= LOGIC ================= */
+        const container = document.getElementById('levelContainer');
+        let currentData = [...levelsData];
 
-        // --- Auth / Login Flow ---
-        function login() {
-            const val = els.usernameInput.value.trim();
-            if (!val) return;
-            
-            state.username = val;
-            els.myHandleDisplay.textContent = '@' + val;
-            
-            // Hide Modal, Show App
-            els.loginModal.style.display = 'none';
-            els.appContainer.style.opacity = '1';
-            
-            // Connect Gun
-            loadSavedData();
-            subscribeToChat('global'); // Default to global
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId + '-view').classList.add('active');
         }
 
-        els.usernameInput.addEventListener('keydown', e => {
-            if(e.key === 'Enter') login();
-        });
-
-        // --- Context Menu (Blocking) ---
-        let contextMenuTargetUser = null;
-
-        function showContextMenu(e, username) {
-            e.preventDefault();
-            if (username === state.username || username === 'SYSTEM') return; // Can't block self or system
-
-            contextMenuTargetUser = username;
-            
-            // Position menu
-            els.contextMenu.style.display = 'flex';
-            els.contextMenu.style.left = `${e.pageX}px`;
-            els.contextMenu.style.top = `${e.pageY}px`;
-            
-            // Update Text
-            els.ctxHeader.textContent = `User: ${username}`;
-            
-            // Check if already blocked to toggle text (optional feature, currently just BLOCK)
-            const isBlocked = state.blockedUsers.includes(username);
-            els.ctxBlockBtn.innerHTML = isBlocked 
-                ? `<i data-lucide="shield-check" class="w-4 h-4 text-green-400"></i> Unblock User`
-                : `<i data-lucide="shield-off" class="w-4 h-4 text-red-400"></i> Block User`;
-            
-            // Re-init icons in menu
-            lucide.createIcons();
+        // Logic to pick the correct face URL
+        function getFaceUrl(rank) {
+            if(rank <= 3) return ASSETS.extreme;
+            if(rank <= 50) return ASSETS.insane;
+            return ASSETS.hard;
         }
 
-        function hideContextMenu() {
-            els.contextMenu.style.display = 'none';
-        }
-
-        els.ctxBlockBtn.onclick = () => {
-            if (!contextMenuTargetUser) return;
-            
-            if (state.blockedUsers.includes(contextMenuTargetUser)) {
-                // Unblock
-                state.blockedUsers = state.blockedUsers.filter(u => u !== contextMenuTargetUser);
-                alert(`Unblocked ${contextMenuTargetUser}`);
-            } else {
-                // Block
-                state.blockedUsers.push(contextMenuTargetUser);
-                alert(`Blocked ${contextMenuTargetUser}. You won't see their messages anymore.`);
-            }
-            
-            // Save
-            localStorage.setItem('veox_blocked', JSON.stringify(state.blockedUsers));
-            
-            // Refresh view to hide/show messages
-            subscribeToChat(state.currentChatId); 
-            hideContextMenu();
-        };
-
-
-        // --- Chat Management ---
-
-        function promptNewChat() {
-            // Using prompt for simplicity as per request "enter user and start dm"
-            const target = prompt("Enter the username to start a private chat:");
-            if (!target || target.trim() === "") return;
-            
-            if (target.trim() === state.username) {
-                alert("You cannot chat with yourself.");
-                return;
-            }
-            
-            createPrivateChat(target.trim());
-        }
-
-        function createPrivateChat(targetUser) {
-            // Generate deterministic ID
-            const users = [state.username, targetUser].sort();
-            const chatId = `veox_pm_${users[0]}_${users[1]}`;
-            
-            // Check if already exists in sidebar, if not add it
-            if (!state.chats.find(c => c.id === chatId)) {
-                state.chats.push({ id: chatId, name: targetUser });
-                localStorage.setItem('veox_chats', JSON.stringify(state.chats));
-                renderChatList();
-            }
-            
-            // Switch to it immediately
-            switchChat(chatId, targetUser);
-        }
-
-        function renderChatList() {
-            // Keep the global chat at top, remove old dynamic ones
-            const dynamicItems = Array.from(els.chatList.children).slice(1);
-            dynamicItems.forEach(el => el.remove());
-
-            state.chats.forEach(chat => {
-                const div = document.createElement('div');
-                div.className = `chat-item p-3 rounded-xl flex items-center gap-3 ${state.currentChatId === chat.id ? 'active' : ''}`;
+        function renderLevels(data) {
+            container.innerHTML = '';
+            data.forEach(level => {
+                const card = document.createElement('div');
+                card.className = 'level-card';
                 
-                // Left Click -> Switch
-                div.onclick = () => switchChat(chat.id, chat.name);
-                
-                // Right Click -> Context Menu (Block user from sidebar)
-                div.oncontextmenu = (e) => showContextMenu(e, chat.name);
+                const faceUrl = getFaceUrl(level.rank);
 
-                div.innerHTML = `
-                    <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center border border-white/10 text-slate-300 font-bold">
-                        ${chat.name.substring(0,2).toUpperCase()}
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex justify-between items-baseline">
-                            <span class="font-medium text-sm text-slate-200">${chat.name}</span>
+                card.innerHTML = `
+                    <div class="rank-num gd-text-outline">#${level.rank}</div>
+                    
+                    <img src="${faceUrl}" class="diff-img" alt="Diff">
+
+                    <div class="level-info">
+                        <div class="level-name gd-text-outline">${level.name}</div>
+                        <div class="level-author gd-text-small">
+                            by <span>${level.creator}</span>
+                            <span class="verifier-tag">ver. ${level.verifier}</span>
                         </div>
-                        <p class="text-xs text-slate-500 truncate">Private Channel</p>
                     </div>
+
+                    <img src="${ASSETS.viewBtn}" class="view-btn-img" onclick="copyId('${level.id}')" title="Copy ID">
                 `;
-                els.chatList.appendChild(div);
+                container.appendChild(card);
             });
+            if(data.length === 0) container.innerHTML = '<div style="padding:20px; text-align:center;">No Levels Found</div>';
         }
 
-        function filterChats() {
-            const query = els.chatSearch.value.toLowerCase();
-            const items = Array.from(els.chatList.children); // All items including global
-            
-            items.forEach(item => {
-                const name = item.querySelector('.font-medium').textContent.toLowerCase();
-                if (name.includes(query)) {
-                    item.style.display = 'flex';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
+        function sortLevels(order) {
+            currentData.sort((a, b) => order === 'asc' ? a.rank - b.rank : b.rank - a.rank);
+            renderLevels(currentData);
         }
 
-        function switchChat(chatId, chatName) {
-            state.currentChatId = chatId;
-            
-            // Update UI Header
-            els.headerTitle.textContent = chatName;
-            els.headerAvatar.textContent = chatName.substring(0, 1).toUpperCase();
-            if(chatId === 'global') {
-                els.headerAvatar.className = "w-9 h-9 rounded-full bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center text-sm font-bold shadow-lg shadow-sky-500/20";
-            } else {
-                els.headerAvatar.className = "w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold border border-white/20";
-            }
-
-            // Update List Active State
-            renderChatList(); 
-
-            // Gun Subscription
-            subscribeToChat(chatId);
-        }
-
-        // --- Gun.js Messaging Logic ---
-
-        function subscribeToChat(path) {
-            // 1. Clean up UI
-            els.messagesContainer.innerHTML = '';
-            
-            // 2. Add System Start Message
-            const sysDiv = document.createElement('div');
-            sysDiv.className = 'flex justify-center my-4';
-            sysDiv.innerHTML = `<span class="text-xs bg-white/5 text-slate-400 px-3 py-1 rounded-full border border-white/5">Encryption Key Loaded: ${path}</span>`;
-            els.messagesContainer.appendChild(sysDiv);
-
-            // 3. Subscribe
-            const seenKeys = new Set();
-            
-            // Note: In a real app we would manage .off() to stop previous listeners
-            // but Gun.js handling of off() can be complex for simple demos.
-            // We'll rely on the fact that we clear the UI and Gun caches data.
-            
-            gun.get(path).map().on((msg, key) => {
-                if (!msg || !msg.text || !msg.timestamp || seenKeys.has(key)) return;
-                
-                // BLOCKING LOGIC: If user is blocked, ignore this message
-                if (state.blockedUsers.includes(msg.user)) return;
-
-                seenKeys.add(key);
-                addMessageToUI(msg);
-            });
-        }
-
-        function addMessageToUI(msg) {
-            const isMe = msg.user === state.username;
-            const time = new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            const div = document.createElement('div');
-            div.className = `flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-[fadeIn_0.3s_ease-out]`;
-            
-            // Avatar logic
-            const avatar = `<div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs border border-white/10 flex-shrink-0 text-slate-300 select-none cursor-pointer hover:border-sky-400 transition-colors" oncontextmenu="showContextMenu(event, '${msg.user}')">${msg.user.substring(0,2).toUpperCase()}</div>`;
-
-            div.innerHTML = `
-                <div class="flex gap-2 max-w-[80%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
-                    ${avatar}
-                    <div class="${isMe ? 'message-bubble-self text-white' : 'message-bubble-other text-slate-200'} px-4 py-2 rounded-2xl shadow-sm relative group" oncontextmenu="showContextMenu(event, '${msg.user}')">
-                         ${!isMe ? `<div class="text-[10px] text-sky-400 mb-0.5 opacity-80 cursor-pointer hover:underline" onclick="createPrivateChat('${msg.user}')">${msg.user}</div>` : ''}
-                        <p class="text-sm leading-relaxed">${msg.text}</p>
-                        <div class="text-[10px] opacity-50 text-right mt-1 w-full block">${time}</div>
-                    </div>
-                </div>
-            `;
-            
-            els.messagesContainer.appendChild(div);
-            // Scroll to bottom
-            els.messagesContainer.scrollTop = els.messagesContainer.scrollHeight;
-        }
-
-        function sendMessage() {
-            const text = els.messageInput.value.trim();
-            if (!text) return;
-            
-            const msg = {
-                user: state.username,
-                text: text,
-                timestamp: Date.now()
-            };
-            
-            gun.get(state.currentChatId).set(msg);
-            els.messageInput.value = '';
-            els.messageInput.focus();
-        }
-
-        function clearCurrentChat() {
-            if(confirm("Clear local view of this chat? (Does not delete from network)")) {
-                els.messagesContainer.innerHTML = '';
-            }
-        }
-
-        // Input Enter Key
-        els.messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') sendMessage();
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const val = e.target.value.toLowerCase();
+            currentData = levelsData.filter(lvl => 
+                lvl.name.toLowerCase().includes(val) || 
+                lvl.creator.toLowerCase().includes(val)
+            );
+            currentData.sort((a, b) => a.rank - b.rank);
+            renderLevels(currentData);
         });
+
+        // Leaderboard
+        const lbBody = document.getElementById('lbBody');
+        usersData.forEach((user, idx) => {
+            lbBody.innerHTML += `
+                <tr>
+                    <td class="lb-rank gd-text-outline">${idx+1}</td>
+                    <td class="gd-text-small">${user.name}</td>
+                    <td class="gd-text-small" style="color:#ccc">${user.records}</td>
+                    <td class="lb-pts gd-text-outline">${user.points}</td>
+                </tr>
+            `;
+        });
+
+        // Roulette
+        function spinRoulette() {
+            const box = document.getElementById('rouletteResult');
+            let count = 0;
+            const interval = setInterval(() => {
+                const rnd = levelsData[Math.floor(Math.random() * levelsData.length)];
+                box.innerText = rnd.name;
+                count++;
+                if(count > 20) {
+                    clearInterval(interval);
+                    box.style.color = '#00FF00';
+                } else {
+                    box.style.color = '#fff';
+                }
+            }, 50);
+        }
+
+        function copyId(id) {
+            navigator.clipboard.writeText(id);
+            alert('Copied Level ID: ' + id);
+        }
+
+        // Init
+        renderLevels(currentData);
 
     </script>
 </body>
